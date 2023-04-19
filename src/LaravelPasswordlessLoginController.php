@@ -2,8 +2,8 @@
 
 namespace Grosv\LaravelPasswordlessLogin;
 
-use Grosv\LaravelPasswordlessLogin\Exceptions\InvalidSignatureException;
 use Grosv\LaravelPasswordlessLogin\Exceptions\ExpiredSignatureException;
+use Grosv\LaravelPasswordlessLogin\Exceptions\InvalidSignatureException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Routing\UrlGenerator;
@@ -26,9 +26,8 @@ class LaravelPasswordlessLoginController extends Controller
      *
      * @param PasswordlessLoginService $passwordlessLoginService
      */
-    public function __construct(PasswordlessLoginService $passwordlessLoginService, UrlGenerator $urlGenerator)
+    public function __construct(UrlGenerator $urlGenerator)
     {
-        $this->passwordlessLoginService = $passwordlessLoginService;
         $this->urlGenerator = $urlGenerator;
     }
 
@@ -40,12 +39,14 @@ class LaravelPasswordlessLoginController extends Controller
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      * @throws \Psr\SimpleCache\InvalidArgumentException|InvalidSignatureException|ExpiredSignatureException
      */
-    public function login(Request $request)
+    public function login(Request $request, PasswordlessLoginService $passwordlessLoginService)
     {
-        if (!$this->urlGenerator->hasCorrectSignature($request) ||
-            ($this->urlGenerator->signatureHasNotExpired($request) && !$this->passwordlessLoginService->requestIsNew())) {
+        $this->passwordlessLoginService = $passwordlessLoginService;
+
+        if (! $this->urlGenerator->hasCorrectSignature($request) ||
+            ($this->urlGenerator->signatureHasNotExpired($request) && ! $this->passwordlessLoginService->requestIsNew())) {
             throw new InvalidSignatureException();
-        } else if (!$this->urlGenerator->signatureHasNotExpired($request)) {
+        } elseif (! $this->urlGenerator->signatureHasNotExpired($request)) {
             throw new ExpiredSignatureException();
         }
 
@@ -61,7 +62,7 @@ class LaravelPasswordlessLoginController extends Controller
 
         if (method_exists(Auth::guard($guard), 'login')) {
             Auth::guard($guard)->login($user, $rememberLogin);
-            
+
             abort_unless($user == Auth::guard($guard)->user(), 401);
         }
 
